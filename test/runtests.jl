@@ -341,38 +341,6 @@ end
         @test loglike(like_sroll2, Dls, (A_planck=1.0,)) ≈ REF_SROLL2_FID rtol=1e-5
         # Non-fiducial
         @test loglike(like_sroll2, Dls, (A_planck=0.990,)) ≈ REF_SROLL2_NONFID rtol=1e-5
-
-        # F. ACT+Planck+SPT-3G Lensing
-        like_lens = ACTPlanckSPTLensing()
-        ell_lens = 0:4000
-        cl_pp_lens = [l <= 1 ? 0.0 : 1e-2 / ((l + 10.0) * (l + 11.0))^3 for l in ell_lens]
-        # Binned model vector values
-        model_lens = build_model_vector(like_lens, cl_pp_lens)
-        @test length(model_lens) == 35
-        @test model_lens[1] ≈ 3.1687243127420143e-7 rtol=1e-5
-        @test model_lens[11] ≈ 4.808818991375343e-7 rtol=1e-5
-        # Log-likelihood
-        @test loglike(like_lens, cl_pp_lens) ≈ -633.9905733558604 rtol=1e-5
-        # chi2
-        @test chi2(like_lens, cl_pp_lens) ≈ 1267.9811467117208 rtol=1e-5
-
-        # G. ACT+Planck+SPT-3G Lensing with active CMB corrections
-        if HAVE_CORRECTIONS
-            like_lens_corr = ACTPlanckSPTLensing(load_corrections=true)
-            cl_tt_lens = [l <= 1 ? 0.0 : 2000.0 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
-            cl_ee_lens = [l <= 1 ? 0.0 : 0.05 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
-            cl_te_lens = [l <= 1 ? 0.0 : 100.0 * exp(-(l - 300.0)^2 / 25000.0) for l in ell_lens]
-            cl_bb_lens = zeros(length(ell_lens))
-
-            model_lens_corr = build_model_vector(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens)
-            @test length(model_lens_corr) == 35
-            @test model_lens_corr[1] ≈ 2.565729356179461e-6 rtol=1e-5
-            @test model_lens_corr[11] ≈ 2.7180458374653162e-5 rtol=1e-5
-            @test loglike(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ -3.1135434299183875e7 rtol=1e-5
-            @test chi2(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ 6.227086859836775e7 rtol=1e-5
-        else
-            @info "Skipping active corrections tests (data not available)"
-        end
     end
 end
 
@@ -449,43 +417,7 @@ function f_indiv_spt(p)
     return chi2(SPT3GD1Lite(), GLOBAL_JOINT_DLS, (Tcal=p[1], Ecal=p[2]))
 end
 
-# Lensing tests
-const GLOBAL_LIKE_LENS = ACTPlanckSPTLensing()
-const GLOBAL_ELL_LENS = 0:4000
-const GLOBAL_CL_PP_BASE = [l <= 1 ? 0.0 : 1e-2 / ((l + 10.0) * (l + 11.0))^3 for l in GLOBAL_ELL_LENS]
 
-function f_lens_global(p)
-    cl_pp = GLOBAL_CL_PP_BASE .* p[1]
-    return chi2(GLOBAL_LIKE_LENS, cl_pp)
-end
-
-function f_lens_global_tuple(p)
-    cl_pp = GLOBAL_CL_PP_BASE .* p[1]
-    return chi2(GLOBAL_LIKE_LENS, cl_pp)
-end
-
-# Lensing with corrections
-const GLOBAL_LIKE_LENS_CORR = HAVE_CORRECTIONS ? ACTPlanckSPTLensing(load_corrections=true) : nothing
-const GLOBAL_CL_TT_LENS = [l <= 1 ? 0.0 : 2000.0 * exp(-(l - 200.0)^2 / 20000.0) for l in GLOBAL_ELL_LENS]
-const GLOBAL_CL_EE_LENS = [l <= 1 ? 0.0 : 0.05 * exp(-(l - 200.0)^2 / 20000.0) for l in GLOBAL_ELL_LENS]
-const GLOBAL_CL_TE_LENS = [l <= 1 ? 0.0 : 100.0 * exp(-(l - 300.0)^2 / 25000.0) for l in GLOBAL_ELL_LENS]
-const GLOBAL_CL_BB_LENS = zeros(4001)
-
-function f_lens_corr_global(p)
-    cl_pp = GLOBAL_CL_PP_BASE .* p[1]
-    cl_tt = GLOBAL_CL_TT_LENS .* p[2]
-    cl_ee = GLOBAL_CL_EE_LENS .* p[3]
-    cl_te = GLOBAL_CL_TE_LENS .* p[4]
-    return chi2(GLOBAL_LIKE_LENS_CORR, cl_pp, cl_tt, cl_ee, cl_te, GLOBAL_CL_BB_LENS)
-end
-
-function f_lens_corr_global_tuple(p)
-    cl_pp = GLOBAL_CL_PP_BASE .* p[1]
-    cl_tt = GLOBAL_CL_TT_LENS .* p[2]
-    cl_ee = GLOBAL_CL_EE_LENS .* p[3]
-    cl_te = GLOBAL_CL_TE_LENS .* p[4]
-    return chi2(GLOBAL_LIKE_LENS_CORR, cl_pp, cl_tt, cl_ee, cl_te, GLOBAL_CL_BB_LENS)
-end
 
 @testset "AD, Joint Likelihood, and Reactant" begin
     p_vec = [1.001, 0.999, 1.002, 1.003, 1.002, 1.001, 1.002]
@@ -536,47 +468,5 @@ end
         @test reactant_grad_vec ≈ grad_fd rtol=1e-4 atol=1e-4
     end
 
-    @testset "Lensing AD, Reactant, and Enzyme" begin
-        p_val = [1.0]
 
-        # 1. Differentiation using DifferentiationInterface (ForwardDiff vs FiniteDiff)
-        g_fd = DifferentiationInterface.gradient(f_lens_global, AutoForwardDiff(), p_val)
-        g_num = DifferentiationInterface.gradient(f_lens_global, AutoFiniteDiff(), p_val)
-        @test all(isfinite, g_fd)
-        @test g_fd ≈ g_num rtol=1e-3 atol=1e-3
-
-        # 2. Reactant compilation
-        compiled_lens = Reactant.compile(f_lens_global_tuple, (p_val,))
-        @test compiled_lens(p_val) ≈ f_lens_global(p_val)
-
-        # 3. Reactant + Enzyme differentiation
-        p_reactant = Reactant.to_rarray((p_val...,); track_numbers=true)
-        g_enzyme_reactant = Reactant.compile(p -> Enzyme.gradient(Reverse, f_lens_global_tuple, p)[1], (p_reactant,))
-        reactant_grad = g_enzyme_reactant(p_reactant)
-        reactant_grad_vec = Float64[Float64(g) for g in reactant_grad]
-        @test reactant_grad_vec ≈ g_fd rtol=1e-4 atol=1e-4
-    end
-
-    if HAVE_CORRECTIONS
-        @testset "Lensing with Corrections AD, Reactant, and Enzyme" begin
-            p_val = [1.0, 1.0, 1.0, 1.0]
-
-            # 1. Differentiation using DifferentiationInterface (ForwardDiff vs FiniteDiff)
-            g_fd = DifferentiationInterface.gradient(f_lens_corr_global, AutoForwardDiff(), p_val)
-            g_num = DifferentiationInterface.gradient(f_lens_corr_global, AutoFiniteDiff(), p_val)
-            @test all(isfinite, g_fd)
-            @test g_fd ≈ g_num rtol=1e-3 atol=1e-3
-
-            # 2. Reactant compilation
-            p_reactant = Reactant.to_rarray((p_val...,); track_numbers=true)
-            compiled_lens = Reactant.compile(f_lens_corr_global_tuple, (p_reactant,))
-            @test compiled_lens(p_reactant) ≈ f_lens_corr_global(p_val)
-
-            # 3. Reactant + Enzyme differentiation
-            g_enzyme_reactant = Reactant.compile(p -> Enzyme.gradient(Reverse, f_lens_corr_global_tuple, p)[1], (p_reactant,))
-            reactant_grad = g_enzyme_reactant(p_reactant)
-            reactant_grad_vec = Float64[Float64(g) for g in reactant_grad]
-            @test reactant_grad_vec ≈ g_fd rtol=1e-4 atol=1e-4
-        end
-    end
 end

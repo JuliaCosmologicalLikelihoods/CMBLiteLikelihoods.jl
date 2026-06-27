@@ -34,8 +34,6 @@ include("spt.jl")
 include("lowtt.jl")
 include("sroll2.jl")
 
-# Lensing likelihoods
-include("lensing.jl")
 
 # Refs for pre-loaded likelihoods
 const CAMSPEC_LITE = Ref{CamSpecLite}()
@@ -43,7 +41,6 @@ const ACT_DR6_CMBONLY = Ref{ACTDR6CMBOnly}()
 const SPT3G_D1_LITE = Ref{SPT3GD1Lite}()
 const PLANCK_LOW_TT = Ref{PlanckLowTT}()
 const SROLL2_LITE = Ref{SROLL2}()
-const ACT_PLANCK_SPT_LENSING = Ref{ACTPlanckSPTLensing}()
 
 const CAMSPEC_LITE_SUB = Ref{CamSpecLite}()
 const ACT_DR6_CMBONLY_SUB = Ref{ACTDR6CMBOnly}()
@@ -56,7 +53,6 @@ function __init__()
     SPT3G_D1_LITE[] = SPT3GD1Lite(joinpath(dir, "spt3g_d1_tne_lite"))
     PLANCK_LOW_TT[] = PlanckLowTT(joinpath(dir, "planck_2018_lowl_TT"))
     SROLL2_LITE[] = SROLL2(joinpath(dir, "planck_2018_lowl_EE_sroll2"))
-    ACT_PLANCK_SPT_LENSING[] = ACTPlanckSPTLensing(joinpath(dir, "act_planck_spt3g_lensing", "actplanckspt3g_baseline"))
 
     # Subsetted versions for joint_chi2
     CAMSPEC_LITE_SUB[] = CamSpecLite(joinpath(dir, "camspec_npipe_lite"); tt_max=1500, te_max=1000, ee_max=600)
@@ -70,14 +66,6 @@ ACTDR6CMBOnly() = ACT_DR6_CMBONLY[]
 SPT3GD1Lite() = SPT3G_D1_LITE[]
 PlanckLowTT() = PLANCK_LOW_TT[]
 SROLL2() = SROLL2_LITE[]
-function ACTPlanckSPTLensing(; load_corrections::Bool=false)
-    if !load_corrections
-        return ACT_PLANCK_SPT_LENSING[]
-    else
-        dir = joinpath(artifact"cmblite_data", "cmblite_data")
-        return ACTPlanckSPTLensing(joinpath(dir, "act_planck_spt3g_lensing", "actplanckspt3g_baseline"); load_corrections=true)
-    end
-end
 
 """
     joint_chi2(Dls, params) -> Real
@@ -106,7 +94,7 @@ end
 
 # Exports
 export CamSpecLite, ACTDR6CMBOnly, SPT3GD1Lite
-export PlanckLowTT, SROLL2, ACTPlanckSPTLensing
+export PlanckLowTT, SROLL2
 export loglike, chi2, build_model_vector
 export apply_aberration, gaussian_chi2
 export joint_chi2
