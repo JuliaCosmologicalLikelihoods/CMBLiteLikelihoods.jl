@@ -7,6 +7,15 @@ import ForwardDiff
 import FiniteDiff
 using Reactant
 using Enzyme
+using LazyArtifacts
+
+const HAVE_CORRECTIONS = begin
+    artifacts_toml = joinpath(pkgdir(CMBLiteLikelihoods), "Artifacts.toml")
+    meta = LazyArtifacts.artifact_meta("cmblite_data", artifacts_toml)
+    art_path = LazyArtifacts.artifact_path(Base.SHA1(meta["git-tree-sha1"]))
+    local_dev_path = joinpath(pkgdir(CMBLiteLikelihoods), "..", "cmbliteplay", "_sources", "spt_act_likelihood", "act_dr6_spt_lenslike", "data", "v1.2", "like_corrs")
+    isdir(joinpath(art_path, "cmblite_data", "act_planck_spt3g_lensing", "like_corrs")) || isdir(local_dev_path)
+end
 
 const EXPORTS = joinpath(@__DIR__, "..", "..", "cmbliteplay", "exports")
 
@@ -348,18 +357,22 @@ end
         @test chi2(like_lens, cl_pp_lens) ≈ 1267.9811467117208 rtol=1e-5
 
         # G. ACT+Planck+SPT-3G Lensing with active CMB corrections
-        like_lens_corr = ACTPlanckSPTLensing(load_corrections=true)
-        cl_tt_lens = [l <= 1 ? 0.0 : 2000.0 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
-        cl_ee_lens = [l <= 1 ? 0.0 : 0.05 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
-        cl_te_lens = [l <= 1 ? 0.0 : 100.0 * exp(-(l - 300.0)^2 / 25000.0) for l in ell_lens]
-        cl_bb_lens = zeros(length(ell_lens))
+        if HAVE_CORRECTIONS
+            like_lens_corr = ACTPlanckSPTLensing(load_corrections=true)
+            cl_tt_lens = [l <= 1 ? 0.0 : 2000.0 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
+            cl_ee_lens = [l <= 1 ? 0.0 : 0.05 * exp(-(l - 200.0)^2 / 20000.0) for l in ell_lens]
+            cl_te_lens = [l <= 1 ? 0.0 : 100.0 * exp(-(l - 300.0)^2 / 25000.0) for l in ell_lens]
+            cl_bb_lens = zeros(length(ell_lens))
 
-        model_lens_corr = build_model_vector(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens)
-        @test length(model_lens_corr) == 35
-        @test model_lens_corr[1] ≈ 2.565729356179461e-6 rtol=1e-5
-        @test model_lens_corr[11] ≈ 2.7180458374653162e-5 rtol=1e-5
-        @test loglike(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ -3.1135434299183875e7 rtol=1e-5
-        @test chi2(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ 6.227086859836775e7 rtol=1e-5
+            model_lens_corr = build_model_vector(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens)
+            @test length(model_lens_corr) == 35
+            @test model_lens_corr[1] ≈ 2.565729356179461e-6 rtol=1e-5
+            @test model_lens_corr[11] ≈ 2.7180458374653162e-5 rtol=1e-5
+            @test loglike(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ -3.1135434299183875e7 rtol=1e-5
+            @test chi2(like_lens_corr, cl_pp_lens, cl_tt_lens, cl_ee_lens, cl_te_lens, cl_bb_lens) ≈ 6.227086859836775e7 rtol=1e-5
+        else
+            @info "Skipping active corrections tests (data not available)"
+        end
     end
 end
 
@@ -452,7 +465,7 @@ function f_lens_global_tuple(p)
 end
 
 # Lensing with corrections
-const GLOBAL_LIKE_LENS_CORR = ACTPlanckSPTLensing(load_corrections=true)
+const GLOBAL_LIKE_LENS_CORR = HAVE_CORRECTIONS ? ACTPlanckSPTLensing(load_corrections=true) : nothing
 const GLOBAL_CL_TT_LENS = [l <= 1 ? 0.0 : 2000.0 * exp(-(l - 200.0)^2 / 20000.0) for l in GLOBAL_ELL_LENS]
 const GLOBAL_CL_EE_LENS = [l <= 1 ? 0.0 : 0.05 * exp(-(l - 200.0)^2 / 20000.0) for l in GLOBAL_ELL_LENS]
 const GLOBAL_CL_TE_LENS = [l <= 1 ? 0.0 : 100.0 * exp(-(l - 300.0)^2 / 25000.0) for l in GLOBAL_ELL_LENS]
@@ -544,24 +557,26 @@ end
         @test reactant_grad_vec ≈ g_fd rtol=1e-4 atol=1e-4
     end
 
-    @testset "Lensing with Corrections AD, Reactant, and Enzyme" begin
-        p_val = [1.0, 1.0, 1.0, 1.0]
+    if HAVE_CORRECTIONS
+        @testset "Lensing with Corrections AD, Reactant, and Enzyme" begin
+            p_val = [1.0, 1.0, 1.0, 1.0]
 
-        # 1. Differentiation using DifferentiationInterface (ForwardDiff vs FiniteDiff)
-        g_fd = DifferentiationInterface.gradient(f_lens_corr_global, AutoForwardDiff(), p_val)
-        g_num = DifferentiationInterface.gradient(f_lens_corr_global, AutoFiniteDiff(), p_val)
-        @test all(isfinite, g_fd)
-        @test g_fd ≈ g_num rtol=1e-3 atol=1e-3
+            # 1. Differentiation using DifferentiationInterface (ForwardDiff vs FiniteDiff)
+            g_fd = DifferentiationInterface.gradient(f_lens_corr_global, AutoForwardDiff(), p_val)
+            g_num = DifferentiationInterface.gradient(f_lens_corr_global, AutoFiniteDiff(), p_val)
+            @test all(isfinite, g_fd)
+            @test g_fd ≈ g_num rtol=1e-3 atol=1e-3
 
-        # 2. Reactant compilation
-        p_reactant = Reactant.to_rarray((p_val...,); track_numbers=true)
-        compiled_lens = Reactant.compile(f_lens_corr_global_tuple, (p_reactant,))
-        @test compiled_lens(p_reactant) ≈ f_lens_corr_global(p_val)
+            # 2. Reactant compilation
+            p_reactant = Reactant.to_rarray((p_val...,); track_numbers=true)
+            compiled_lens = Reactant.compile(f_lens_corr_global_tuple, (p_reactant,))
+            @test compiled_lens(p_reactant) ≈ f_lens_corr_global(p_val)
 
-        # 3. Reactant + Enzyme differentiation
-        g_enzyme_reactant = Reactant.compile(p -> Enzyme.gradient(Reverse, f_lens_corr_global_tuple, p)[1], (p_reactant,))
-        reactant_grad = g_enzyme_reactant(p_reactant)
-        reactant_grad_vec = Float64[Float64(g) for g in reactant_grad]
-        @test reactant_grad_vec ≈ g_fd rtol=1e-4 atol=1e-4
+            # 3. Reactant + Enzyme differentiation
+            g_enzyme_reactant = Reactant.compile(p -> Enzyme.gradient(Reverse, f_lens_corr_global_tuple, p)[1], (p_reactant,))
+            reactant_grad = g_enzyme_reactant(p_reactant)
+            reactant_grad_vec = Float64[Float64(g) for g in reactant_grad]
+            @test reactant_grad_vec ≈ g_fd rtol=1e-4 atol=1e-4
+        end
     end
 end

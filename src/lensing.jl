@@ -161,7 +161,13 @@ function ACTPlanckSPTLensing(data_dir::AbstractString; load_corrections::Bool=fa
     like_corrs_dir = if isdir(joinpath(lensing_data_dir, "like_corrs"))
         joinpath(lensing_data_dir, "like_corrs")
     else
-        error("like_corrs directory not found under $lensing_data_dir")
+        # Try local developer dev path fallback relative to package root
+        dev_dir = joinpath(pkgdir(@__MODULE__), "..", "cmbliteplay", "_sources", "spt_act_likelihood", "act_dr6_spt_lenslike", "data", "v1.2", "like_corrs")
+        if isdir(dev_dir)
+            dev_dir
+        else
+            error("like_corrs directory not found under $lensing_data_dir or $dev_dir")
+        end
     end
 
     # 1. Load fiducial lensed CMB spectra
