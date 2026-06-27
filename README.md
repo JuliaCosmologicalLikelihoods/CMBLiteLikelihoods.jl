@@ -1,6 +1,6 @@
 # CMBLiteLikelihoods.jl
 
-[![Build Status](https://github.com/marcobonici/CMBLiteLikelihoods.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/marcobonici/CMBLiteLikelihoods.jl/actions/workflows/CI.yml)
+[![Build Status](https://github.com/JuliaCosmologicalLikelihoods/CMBLiteLikelihoods.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaCosmologicalLikelihoods/CMBLiteLikelihoods.jl/actions/workflows/CI.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 `CMBLiteLikelihoods.jl` is a high-performance, native Julia implementation of lightweight CMB and CMB lensing likelihoods. It features first-class support for **just-in-time (JIT) compilation** via [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl) (XLA compilation targeting CPU, GPU, and TPU backends) and **reverse-mode automatic differentiation (AD)** using [Enzyme.jl](https://github.com/EnzymeAD/Enzyme.jl).
@@ -29,7 +29,7 @@
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/marcobonici/CMBLiteLikelihoods.jl")
+Pkg.add(url="https://github.com/JuliaCosmologicalLikelihoods/CMBLiteLikelihoods.jl")
 ```
 
 ---
