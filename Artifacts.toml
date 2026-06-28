@@ -1,0 +1,6 @@
+[cmblite_data]
+git-tree-sha1 = "2713c3d89b2e5d70459ec417ff3b455223451fe1"
+
+    [[cmblite_data.download]]
+    url = "https://zenodo.org/records/20837482/files/cmblite_data.tar.xz?download=1"
+    sha256 = "71d298ad2e4a2118936dd0234b0aac7de936460fca44903c30786d614535cfb1"
