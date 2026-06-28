@@ -7,15 +7,15 @@ import ForwardDiff
 import FiniteDiff
 using Reactant
 using Enzyme
-using LazyArtifacts
 using Zygote
 using Mooncake
+using Artifacts
 
 
 const HAVE_CORRECTIONS = begin
     artifacts_toml = joinpath(pkgdir(CMBLiteLikelihoods), "Artifacts.toml")
-    meta = LazyArtifacts.artifact_meta("cmblite_data", artifacts_toml)
-    art_path = LazyArtifacts.artifact_path(Base.SHA1(meta["git-tree-sha1"]))
+    meta = Artifacts.artifact_meta("cmblite_data", artifacts_toml)
+    art_path = Artifacts.artifact_path(Base.SHA1(meta["git-tree-sha1"]))
     local_dev_path = joinpath(pkgdir(CMBLiteLikelihoods), "..", "cmbliteplay", "_sources", "spt_act_likelihood", "act_dr6_spt_lenslike", "data", "v1.2", "like_corrs")
     isdir(joinpath(art_path, "cmblite_data", "act_planck_spt3g_lensing", "like_corrs")) || isdir(local_dev_path)
 end
