@@ -13,10 +13,10 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 AbstractCosmologicalEmulators = "0.10"
-Artifacts = "1.11.0"
-BenchmarkTools = "1.8.0"
+Artifacts = "1.10"
+BenchmarkTools = "1.8"
 NPZ = "0.4"
-Test = "1.11.0"
+Test = "1.10"
 julia = "1.10"
 
 [weakdeps]
