@@ -8,6 +8,9 @@ import FiniteDiff
 using Reactant
 using Enzyme
 using LazyArtifacts
+using Zygote
+using Mooncake
+
 
 const HAVE_CORRECTIONS = begin
     artifacts_toml = joinpath(pkgdir(CMBLiteLikelihoods), "Artifacts.toml")
@@ -434,6 +437,20 @@ end
     @test all(isfinite, grad_findiff)
 
     @test grad_fd ≈ grad_findiff rtol=1e-3 atol=1e-3
+
+    # Zygote differentiation test
+    @testset "Zygote AD" begin
+        grad_zygote = DifferentiationInterface.gradient(f_joint_global, AutoZygote(), p_vec)
+        @test all(isfinite, grad_zygote)
+        @test grad_zygote ≈ grad_fd rtol=1e-3 atol=1e-3
+    end
+
+    # Mooncake differentiation test
+    @testset "Mooncake AD" begin
+        grad_mooncake = DifferentiationInterface.gradient(f_joint_global, AutoMooncake(), p_vec)
+        @test all(isfinite, grad_mooncake)
+        @test grad_mooncake ≈ grad_fd rtol=1e-3 atol=1e-3
+    end
 
     # Test differentiation of each individual likelihood
     for (name, f_indiv, p_sub) in [

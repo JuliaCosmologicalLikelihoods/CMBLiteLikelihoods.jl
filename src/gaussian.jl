@@ -61,12 +61,11 @@ function CubicSpline(u::AbstractVector, t::AbstractVector)
     return CubicSpline(Vector{Float64}(u), Vector{Float64}(t), Vector{Float64}(h), Vector{Float64}(z))
 end
 
-"""
-    evaluate(spl::CubicSpline, tq::Real)
+function evaluate(spl::CubicSpline, tq::Real)
+    return AbstractCosmologicalEmulators._cubic_spline_eval(spl.u, spl.t, spl.h, spl.z, [tq])[1]
+end
 
-Evaluate the precomputed cubic spline at a scalar query point.
-"""
-function evaluate(spl::CubicSpline, tq)
+function evaluate(spl::CubicSpline, tq::AbstractArray)
     return AbstractCosmologicalEmulators._cubic_spline_eval(spl.u, spl.t, spl.h, spl.z, tq)
 end
 

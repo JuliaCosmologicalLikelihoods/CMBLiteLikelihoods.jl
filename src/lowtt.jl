@@ -100,11 +100,8 @@ Compute the Planck low-ℓ TT log-likelihood via cubic spline interpolation.
 function loglike(like::PlanckLowTT, Dls, params)
     A_planck = getproperty(params, :A_planck)
     n = length(like.ell)
-    T = promote_type(eltype(Dls.TT), typeof(A_planck))
-    x = Vector{T}(undef, n)
-    logjac = zero(T)
 
-    @inbounds for i in 1:n
+    res = map(Tuple(1:n)) do i
         ℓ = like.ell[i]
         d = Dls.TT[ℓ + 1] / (A_planck * A_planck)
 
@@ -119,9 +116,13 @@ function loglike(like::PlanckLowTT, Dls, params)
         # Evaluate derivative spline for Jacobian
         dxdd = evaluate(like.deriv_splines[i], d_clamped)
 
-        logjac += ifelse(in_bounds, log(abs(dxdd)), -1e20)
-        x[i] = ifelse(in_bounds, x_val, zero(T))
+        logjac_val = ifelse(in_bounds, log(abs(dxdd)), -1e20)
+        x_val_final = ifelse(in_bounds, x_val, zero(x_val))
+        return (logjac_val, x_val_final)
     end
+
+    logjac = sum(r -> r[1], res)
+    x = [map(r -> r[2], res)...]
 
     δ = x .- like.mean_x
     chi2_x = dot(δ, like.prec_x * δ)
